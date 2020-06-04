@@ -41,6 +41,7 @@ private:
     void zoomStart();
     void zoomMotion(InputEvent const& event);
     void zoomEnd();
+    utl::Point<double> getScrollCenter();
 
 public:
     explicit TouchInputHandler(InputContext* inputContext);

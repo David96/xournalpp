@@ -78,7 +78,7 @@ auto ZoomControl::getVisibleRect() -> Rectangle<double> {
 }
 
 void ZoomControl::setScrollPositionAfterZoom(utl::Point<double> scrollPos) {
-    this->scrollPosition = (scrollPos + this->zoomWidgetPos) / this->zoom;
+    this->scrollPosition += scrollPos / this->zoom;
 }
 
 auto ZoomControl::getScrollPositionAfterZoom() const -> utl::Point<double> {

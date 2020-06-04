@@ -92,10 +92,7 @@ void TouchInputHandler::scrollMotion(InputEvent const& event) {
     gtk_adjustment_set_value(v, gtk_adjustment_get_value(v) - offset.y);
 }
 
-void TouchInputHandler::zoomStart() {
-    if (!inputContext->getSettings()->isZoomGesturesEnabled()) {
-        return;
-    }
+utl::Point<double> TouchInputHandler::getScrollCenter() {
 
     // Take horizontal and vertical padding of view into account when calculating the center of the gesture
     int vPadding = inputContext->getSettings()->getAddVerticalSpace() ?
@@ -105,10 +102,18 @@ void TouchInputHandler::zoomStart() {
                            inputContext->getSettings()->getAddHorizontalSpaceAmount() :
                            0;
 
-    auto center = (this->priLastRel + this->secLastRel) / 2.0 - utl::Point<double>{double(hPadding), double(vPadding)};
+    return (this->priLastAbs + this->secLastAbs) / 2.0 // center of touch gesture
+          - utl::Point<double>{double(hPadding), double(vPadding)}; // eventual paddings
+}
 
+void TouchInputHandler::zoomStart() {
+    if (!inputContext->getSettings()->isZoomGesturesEnabled()) {
+        return;
+    }
+
+
+    this->lastZoomScrollCenter = getScrollCenter();
     this->startZoomDistance = this->priLastAbs.distance(this->secLastAbs);
-    lastZoomScrollCenter = (this->priLastAbs + this->secLastAbs) / 2.0;
 
     ZoomControl* zoomControl = this->inputContext->getView()->getControl()->getZoomControl();
 
@@ -118,9 +123,9 @@ void TouchInputHandler::zoomStart() {
         zoomControl->setZoomFitMode(false);
     }
 
-    Rectangle zoomSequenceRectangle = zoomControl->getVisibleRect();
-
-    zoomControl->startZoomSequence(center);
+    auto const& rect = zoomControl->getVisibleRect();
+    auto const& view_pos = utl::Point{rect.x, rect.y};
+    zoomControl->startZoomSequence(this->lastZoomScrollCenter + view_pos);
 }
 
 void TouchInputHandler::zoomMotion(InputEvent const& event) {
@@ -137,12 +142,12 @@ void TouchInputHandler::zoomMotion(InputEvent const& event) {
     ZoomControl* zoomControl = this->inputContext->getView()->getControl()->getZoomControl();
     zoomControl->zoomSequenceChange(zoom, true);
 
-    auto center = (this->priLastAbs + this->secLastAbs) / 2;
-    auto lastScrollPosition = zoomControl->getScrollPositionAfterZoom();
-    auto offset = lastScrollPosition - (center - lastZoomScrollCenter);
+    auto center = getScrollCenter();
 
+    auto offset = (lastZoomScrollCenter - center);
     zoomControl->setScrollPositionAfterZoom(offset);
-    lastZoomScrollCenter = center;
+
+    this->lastZoomScrollCenter = center;
 }
 
 void TouchInputHandler::zoomEnd() {
